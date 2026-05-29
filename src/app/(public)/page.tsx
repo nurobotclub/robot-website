@@ -1,45 +1,17 @@
-import Link from "next/link"
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { blogPosts, BlogPost } from "@/constants/news";
 
 export default function HomePage() {
-  // Mock data for Blog Posts & Club Announcements (Fully Tech & Community focused)
-  const blogPosts = [
-    {
-      id: 1,
-      title: "🚀 เริ่มต้นพัฒนา IoT ด้วย ESP32 และ MicroPython สำหรับผู้เริ่มต้น",
-      date: "27 พฤษภาคม 2026",
-      summary: "เรียนรู้วิธีการติดตั้งตัวแปลภาษา MicroPython ลงบนบอร์ดควบคุมสุดฮิตอย่าง ESP32 พร้อมเขียนโค้ดสั้นๆ ควบคุมไฟ LED และอ่านค่าโมดูลวัดอุณหภูมิความชื้นง่ายๆ ใน 5 นาที",
-      category: "Embedded & IoT",
-      author: "CPE Tech Team",
-      readTime: "อ่าน 5 นาที",
-    },
-    {
-      id: 2,
-      title: "🎓 สรุปภาพรวมกิจกรรมอบรมสมองกลฝังตัว Embedded System 101 ประจำสัปดาห์",
-      date: "15 พฤษภาคม 2026",
-      summary: "เก็บตกบรรยากาศสุดอบอุ่นจากการอบรมพื้นฐานต่อวงจรและจับคู่คอมโพเนนต์อิเล็กทรอนิกส์ของนิสิตวิศวกรรมศาสตร์ชั้นปีที่ 1 ณ ห้องชมรมวิชาการชั้น 2",
-      category: "กิจกรรมชมรม",
-      author: "ประชาสัมพันธ์",
-      readTime: "อ่าน 3 นาที",
-    },
-    {
-      id: 3,
-      title: "🛠 ส่องโปรเจกต์เด่น: ระบบเกษตรอัจฉริยะแบบประหยัดพลังงานด้วยเครือข่าย LoRaWAN",
-      date: "10 พฤษภาคม 2026",
-      summary: "เจาะลึกแนวคิดการเชื่อมต่อโหนดเซนเซอร์อัจฉริยะผ่านเทคโนโลยีสัญญาณวิทยุระยะไกล LoRaWAN ที่ถูกออกแบบและสร้างขึ้นจริงโดยฝีมือนิสิตในชมรมเพื่อแก้ปัญหาในท้องถิ่น",
-      category: "Project Showcase",
-      author: "NU Robot Dev",
-      readTime: "อ่าน 7 นาที",
-    },
-  ]
+  const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
 
   return (
-    <div className="flex flex-col gap-24 pb-24">
-
+    <div className="flex flex-col gap-24 pb-24 relative">
       {/* 1. Hero Section (100% Focused on NU Robot Club Web Blog) */}
       <section className="relative overflow-hidden pt-12 md:pt-20">
         <div className="mx-auto max-w-7xl px-6 md:px-8 text-center relative z-10 flex flex-col items-center">
-
-
           {/* Heading */}
           <h1 className="text-4xl font-black tracking-tight text-gray-900 sm:text-6xl max-w-5xl leading-tight">
             NU Robot Club <br className="hidden sm:inline" />
@@ -77,7 +49,6 @@ export default function HomePage() {
       {/* 2. Blog Posts & Announcements Section */}
       <section id="blog-posts" className="mx-auto w-full max-w-7xl px-6 md:px-8 scroll-mt-24">
         <div className="flex flex-col gap-10">
-
           <div className="flex flex-col sm:flex-row sm:items-end justify-between border-b border-gray-100 pb-6 gap-4">
             <div>
               <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
@@ -88,46 +59,192 @@ export default function HomePage() {
               </p>
             </div>
             <span className="text-xs text-gray-400 font-bold self-start sm:self-center bg-gray-100 px-3 py-1 rounded-full">
-              อัปเดตล่าสุด: {blogPosts[0].date}
+              อัปเดตล่าสุด: {blogPosts.length > 0 ? blogPosts[0].date : "ไม่มีบทความใหม่"}
             </span>
           </div>
 
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-            {blogPosts.map((post) => (
-              <div
-                key={post.id}
-                className="flex flex-col justify-between p-8 rounded-2xl border border-gray-200 bg-white hover:border-orange-500/30 shadow-sm hover:shadow-md transition-all duration-300 group"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-5">
-                    <span className="inline-block text-xs font-bold bg-orange-50 border border-orange-200/50 text-orange-600 px-3 py-1 rounded-full">
-                      {post.category}
-                    </span>
-                    <span className="text-xs text-gray-400 font-bold">
-                      {post.readTime}
-                    </span>
+          {/* Render Active News Grid dynamically imported from src/constants/news.ts */}
+          {blogPosts.length === 0 ? (
+            <div className="rounded-[32px] border border-dashed border-gray-200 bg-white py-20 text-center animate-in fade-in duration-300 shadow-xs flex flex-col items-center">
+              <span className="text-4xl mb-4">📭</span>
+              <h3 className="text-lg font-bold text-gray-700">ขณะนี้ยังไม่มีบทความหรือข่าวสารประชาสัมพันธ์</h3>
+              <p className="text-xs text-gray-400 mt-2 max-w-sm leading-relaxed font-semibold">
+                ติดตามข่าวคราว กิจกรรมอบรมเชิงปฏิบัติการ และความเคลื่อนไหวโปรเจกต์ IoT/Embedded นวัตกรรมของชมรมได้ที่นี่เร็ว ๆ นี้ครับ!
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+              {blogPosts.map((post) => (
+                <div
+                  key={post.id}
+                  onClick={() => setSelectedPost(post)}
+                  className="flex flex-col justify-between rounded-3xl border border-gray-200 bg-white hover:border-orange-500/30 shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer overflow-hidden"
+                >
+                  {/* Post Banner Image */}
+                  <div className="relative h-48 w-full overflow-hidden bg-gray-50">
+                    <img
+                      src={post.image}
+                      alt={post.title}
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute top-3 left-3">
+                      <span className="inline-block text-[10px] font-black uppercase tracking-wider bg-white/90 backdrop-blur-xs border border-gray-200/50 text-orange-600 px-3 py-1.5 rounded-full shadow-xs">
+                        {post.category}
+                      </span>
+                    </div>
+                    {/* Floating Image Size Label */}
+                    <div className="absolute bottom-3 right-3 z-10">
+                      <span className="inline-flex items-center gap-1 text-[9px] font-extrabold bg-black/60 backdrop-blur-xs text-white px-2 py-1 rounded-md tracking-wider">
+                        📷 {post.imageSize}
+                      </span>
+                    </div>
                   </div>
 
-                  <h3 className="text-xl font-bold text-gray-800 leading-snug group-hover:text-orange-500 transition-colors duration-200">
-                    {post.title}
-                  </h3>
+                  {/* Card Body */}
+                  <div className="p-6 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-lg font-black text-gray-800 leading-snug group-hover:text-orange-500 transition-colors duration-200">
+                        {post.title}
+                      </h3>
 
-                  <p className="text-sm text-gray-500 mt-4 leading-relaxed line-clamp-4">
-                    {post.summary}
-                  </p>
+                      <p className="text-xs text-gray-500 mt-3 leading-relaxed line-clamp-3 font-semibold">
+                        {post.summary}
+                      </p>
+                    </div>
+
+                    <div className="border-t border-gray-50 pt-4 mt-6 flex items-center justify-between text-[11px] text-gray-400 font-bold">
+                      <div>✍️ โดย: <span className="text-gray-600">{post.author}</span></div>
+                      <div>🗓 {post.date}</div>
+                    </div>
+                  </div>
                 </div>
-
-                <div className="border-t border-gray-50 pt-5 mt-8 flex items-center justify-between text-xs text-gray-400 font-semibold">
-                  <div>✍️ โดย: <span className="text-gray-600">{post.author}</span></div>
-                  <div>🗓 {post.date}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
+      {/* 3. Ultra-Premium News Article Reader Modal Popup */}
+      {selectedPost && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-md p-4 sm:p-6 animate-in fade-in duration-300">
+          <div className="w-full max-w-3xl max-h-[90vh] rounded-[32px] border border-white/20 bg-white/95 backdrop-blur-xl shadow-[0_20px_50px_rgba(249,115,22,0.12)] flex flex-col overflow-hidden relative transition-all duration-300 animate-in zoom-in-95 duration-300">
+            
+            {/* Close Button with Glowing Orange Ring and Hover Rotate */}
+            <button
+              onClick={() => setSelectedPost(null)}
+              className="absolute top-5 right-5 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 border border-gray-100 text-gray-500 hover:text-orange-500 hover:border-orange-200 shadow-md transition-all duration-300 hover:rotate-90 hover:scale-110 cursor-pointer active:scale-95 text-xl font-bold"
+              title="ปิดหน้าต่างอ่านบทความ"
+            >
+              &times;
+            </button>
+
+            {/* Scrollable Container */}
+            <div className="overflow-y-auto flex-1 scrollbar-thin">
+              
+              {/* Image Banner Header with soft fading blend */}
+              <div className="relative h-64 sm:h-80 w-full overflow-hidden bg-gray-50 shrink-0">
+                <img
+                  src={selectedPost.image}
+                  alt={selectedPost.title}
+                  className="h-full w-full object-cover"
+                />
+                {/* Dynamic Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-white/95 via-transparent to-black/10" />
+                
+                {/* Floating Tag */}
+                <div className="absolute bottom-5 left-6 sm:left-8">
+                  <span className="inline-block text-[10px] font-black uppercase tracking-widest bg-orange-500 text-white px-3.5 py-1.5 rounded-xl shadow-lg shadow-orange-500/20">
+                    {selectedPost.category}
+                  </span>
+                </div>
+
+                {/* Floating Image Size badge inside Modal */}
+                <div className="absolute bottom-5 right-6 sm:right-8">
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-black tracking-wider bg-black/60 backdrop-blur-xs text-white px-3.5 py-1.5 rounded-xl shadow-md border border-white/10">
+                    📷 ขนาดรูปภาพ: {selectedPost.imageSize}
+                  </span>
+                </div>
+              </div>
+
+              {/* Modal Body Container */}
+              <div className="px-6 sm:px-8 pb-8 pt-2 space-y-6">
+                
+                {/* Premium Author & Meta Banner */}
+                <div className="flex flex-wrap gap-4 items-center justify-between py-4 border-y border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-orange-400 to-orange-600 flex items-center justify-center text-white text-xs font-black shadow-md shadow-orange-500/20">
+                      {selectedPost.author.charAt(0)}
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-black text-gray-400 block uppercase tracking-widest">ผู้ประพันธ์</span>
+                      <span className="text-xs font-black text-gray-800 leading-none">{selectedPost.author}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-6 text-[10px] font-bold text-gray-400">
+                    <span className="flex items-center gap-1.5">🗓 วันเผยแพร่: {selectedPost.date}</span>
+                  </div>
+                </div>
+
+                {/* Article Content Layout */}
+                <div className="space-y-5">
+                  <h3 className="text-2xl sm:text-3.5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-950 via-slate-900 to-orange-600 leading-snug tracking-tight">
+                    {selectedPost.title}
+                  </h3>
+
+                  {/* Summary Callout Box */}
+                  <p className="text-xs text-orange-900 leading-relaxed font-bold border-l-4 border-orange-500 pl-4 bg-orange-50/40 p-4 rounded-r-2xl border-y border-r border-orange-100/20">
+                    💡 **บทสรุปสังเขป**: {selectedPost.summary}
+                  </p>
+
+                  {/* Main Rich Text Content */}
+                  <div className="text-sm text-gray-600 leading-relaxed font-semibold space-y-4 pt-2">
+                    {selectedPost.content.split("\n\n").map((paragraph, index) => {
+                      // Check if it represents a custom bullet point list
+                      if (paragraph.includes("\n- ")) {
+                        const lines = paragraph.split("\n");
+                        const intro = lines[0];
+                        const listItems = lines.slice(1);
+                        return (
+                          <div key={index} className="space-y-2">
+                            {intro && <p className="mb-2">{intro}</p>}
+                            <ul className="space-y-2.5 pl-1.5">
+                              {listItems.map((li, idx) => {
+                                const cleanLi = li.replace("- ", "");
+                                return (
+                                  <li key={idx} className="flex items-start gap-2 text-xs font-semibold text-gray-600">
+                                    <span className="text-orange-500 text-sm leading-none mt-0.5">⚡</span>
+                                    <span className="leading-relaxed">{cleanLi}</span>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <p key={index} className="whitespace-pre-line">
+                          {paragraph}
+                        </p>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Sticky Action Footer */}
+            <div className="px-6 sm:px-8 py-5 border-t border-gray-100 bg-gray-50/50 flex justify-end shrink-0">
+              <button
+                onClick={() => setSelectedPost(null)}
+                className="rounded-2xl bg-gray-950 hover:bg-orange-500 px-6 py-3.5 text-xs font-bold text-white shadow-md hover:shadow-orange-500/20 transition-all duration-300 cursor-pointer active:scale-95"
+              >
+                เสร็จสิ้นการอ่านข่าวสาร
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  )
+  );
 }

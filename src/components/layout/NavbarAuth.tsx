@@ -9,7 +9,8 @@ import { useCart } from "@/providers/CartProvider";
 export default function NavbarAuth() {
   const { data: session, status } = useSession();
   const [isOpen, setIsOpen] = useState(false);
-  const { cartCount } = useCart();
+  const [isCartHovered, setIsCartHovered] = useState(false);
+  const { cartItems, cartCount, removeFromCart } = useCart();
 
   if (status === "loading") {
     return (
@@ -33,19 +34,80 @@ export default function NavbarAuth() {
 
   return (
     <div className="flex items-center gap-4 relative z-50">
-      {/* Premium Cart Button */}
-      <Link
-        href="/cart"
-        className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-gray-200/80 bg-white shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-300 cursor-pointer active:scale-95 group"
-        title="ตะกร้ายืมอุปกรณ์"
+      {/* Premium Cart Button with Hover Preview Tab */}
+      <div 
+        className="relative"
+        onMouseEnter={() => setIsCartHovered(true)}
+        onMouseLeave={() => setIsCartHovered(false)}
       >
-        <span className="text-xl leading-none">🛒</span>
-        {cartCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] font-black text-white shadow-md shadow-orange-500/30 animate-pulse">
-            {cartCount}
-          </span>
+        <Link
+          href="/cart"
+          className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-gray-200/80 bg-white shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-300 cursor-pointer active:scale-95 group"
+          title="ตะกร้ายืมอุปกรณ์"
+        >
+          <span className="text-xl leading-none">🛒</span>
+          {cartCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] font-black text-white shadow-md shadow-orange-500/30 animate-pulse">
+              {cartCount}
+            </span>
+          )}
+        </Link>
+
+        {/* Hover Dropdown Preview Tab */}
+        {isCartHovered && (
+          <div className="absolute right-0 mt-2.5 w-80 origin-top-right rounded-3xl border border-gray-100 bg-white p-4 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200 z-50">
+            <h4 className="text-xs font-black text-gray-900 border-b border-gray-100 pb-2 mb-2.5 flex items-center justify-between">
+              <span className="flex items-center gap-1">📋 อุปกรณ์ในตะกร้า</span>
+              <span className="text-[10px] font-black bg-orange-50 text-orange-600 border border-orange-200 px-2 py-0.5 rounded-md">
+                {cartCount} รายการ
+              </span>
+            </h4>
+
+            {cartItems.length === 0 ? (
+              <div className="py-8 text-center text-xs font-bold text-gray-400 flex flex-col items-center gap-1.5">
+                <span>🔌 ตะกร้าว่างเปล่า</span>
+                <span className="text-[10px] font-medium text-gray-300">เลือกของเพื่อสะสมขอยืม</span>
+              </div>
+            ) : (
+              <>
+                <div className="max-h-48 overflow-y-auto divide-y divide-gray-100/50 pr-1 flex flex-col gap-2">
+                  {cartItems.map((item) => (
+                    <div key={item.id} className="pt-2 first:pt-0 flex items-center justify-between gap-3 group/item">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[9px] font-black text-orange-500 block uppercase tracking-wider mb-0.5">
+                          {item.id}
+                        </span>
+                        <h5 className="text-xs font-bold text-gray-800 truncate" title={item.name}>
+                          {item.name}
+                        </h5>
+                        <div className="flex items-center justify-between text-[10px] text-gray-400 font-bold mt-0.5">
+                          <span>📦 จำนวน: {item.quantity} ชิ้น</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removeFromCart(item.id)}
+                        className="text-xs text-gray-300 hover:text-red-500 hover:scale-110 transition-all duration-200 cursor-pointer active:scale-90 p-1"
+                        title="ลบสิ่งของออกจากตะกร้า"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-gray-100 flex flex-col gap-2">
+                  <Link
+                    href="/cart"
+                    className="w-full rounded-2xl bg-gray-900 hover:bg-orange-500 text-white font-bold py-3 text-center text-xs transition-all duration-300 shadow-md shadow-gray-900/10 hover:shadow-orange-500/20 cursor-pointer active:scale-98 flex items-center justify-center gap-1.5"
+                  >
+                    <span>🔗 ไปยังหน้าตะกร้ายืมอุปกรณ์</span>
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
         )}
-      </Link>
+      </div>
 
       {/* User Trigger */}
       <div className="relative">

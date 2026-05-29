@@ -48,6 +48,12 @@ export default function BorrowHistoryPage() {
   const [returnError, setReturnError] = useState<string | null>(null);
   const [returnSuccess, setReturnSuccess] = useState<string | null>(null);
 
+  // Cancel request state
+  const [cancellingRequestId, setCancellingRequestId] = useState<string | null>(null);
+  const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelSuccess, setCancelSuccess] = useState<string | null>(null);
+
   const fetchRequests = async () => {
     try {
       setIsLoading(true);
@@ -454,6 +460,107 @@ export default function BorrowHistoryPage() {
         </div>
       )}
 
+      {/* Cancel Request Confirmation Modal */}
+      {cancellingRequestId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-3xl border border-gray-100 bg-white p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <h3 className="text-lg font-black text-rose-700 flex items-center gap-2">
+                <span>🚫</span> ยืนยันยกเลิกคำขอยืมอุปกรณ์
+                <span className="text-xs bg-gray-100 border border-gray-200 px-2 py-1 rounded-md text-gray-600">
+                  {cancellingRequestId}
+                </span>
+              </h3>
+              <button
+                onClick={() => {
+                  setCancellingRequestId(null);
+                  setCancelError(null);
+                  setCancelSuccess(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 text-xl font-bold cursor-pointer"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="text-xs leading-relaxed p-3.5 rounded-2xl bg-rose-50 border border-rose-100 text-rose-800 font-medium">
+              <p>คุณแน่ใจหรือไม่ว่าต้องการยกเลิกคำขอยืมอุปกรณ์ใบนี้? การยกเลิกจะมีผลทันทีและไม่สามารถเปลี่ยนกลับได้</p>
+            </div>
+
+            {cancelError && (
+              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700 leading-relaxed animate-pulse">
+                ❌ {cancelError}
+              </div>
+            )}
+
+            {cancelSuccess && (
+              <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-700 leading-relaxed">
+                🎉 {cancelSuccess}
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setCancellingRequestId(null);
+                  setCancelError(null);
+                  setCancelSuccess(null);
+                }}
+                className="rounded-xl border border-gray-200 bg-white hover:bg-gray-50 px-5 py-2.5 text-xs font-bold text-gray-500 transition active:scale-95 cursor-pointer"
+                disabled={isSubmittingCancel}
+              >
+                ย้อนกลับ
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingCancel}
+                onClick={async () => {
+                  try {
+                    setIsSubmittingCancel(true);
+                    setCancelError(null);
+
+                    const res = await fetch("/api/borrow", {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ id: cancellingRequestId, action: "cancel" }),
+                    });
+
+                    const result = await res.json();
+
+                    if (!res.ok) {
+                      throw new Error(result.error || "เกิดข้อผิดพลาดในการยกเลิกคำขอยืม");
+                    }
+
+                    setCancelSuccess("ยกเลิกคำขอยืมสำเร็จแล้ว!");
+                    await fetchRequests();
+
+                    setTimeout(() => {
+                      setCancellingRequestId(null);
+                      setCancelSuccess(null);
+                    }, 1500);
+                  } catch (err: any) {
+                    setCancelError(err.message || "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
+                  } finally {
+                    setIsSubmittingCancel(false);
+                  }
+                }}
+                className="rounded-xl bg-rose-600 hover:bg-rose-700 px-5 py-2.5 text-xs font-bold text-white shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+              >
+                {isSubmittingCancel ? (
+                  <>
+                    <span className="inline-block animate-spin h-3.5 w-3.5 border-t-2 border-b-2 border-white rounded-full"></span>
+                    กำลังยกเลิก...
+                  </>
+                ) : (
+                  "🚫 ยืนยันยกเลิกคำขอ"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Requests List */}
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-24 gap-4">
@@ -570,6 +677,21 @@ export default function BorrowHistoryPage() {
                         className="col-span-2 md:col-auto rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-3.5 text-xs transition shadow-sm hover:shadow-md active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
                       >
                         {timeInfo?.buttonLabel || "🔄 คืนอุปกรณ์"}
+                      </button>
+                    )}
+
+                    {/* Quick Cancel Action Button for pending requests */}
+                    {request.status.toLowerCase() === "pending" && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent accordion expanding
+                          setCancellingRequestId(request.id);
+                          setCancelError(null);
+                          setCancelSuccess(null);
+                        }}
+                        className="col-span-2 md:col-auto rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 font-bold py-2 px-3.5 text-xs transition shadow-sm hover:shadow-md active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        🚫 ยกเลิกคำขอ
                       </button>
                     )}
                   </div>
@@ -704,6 +826,22 @@ export default function BorrowHistoryPage() {
                               className="w-full rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 text-xs transition shadow-sm hover:shadow-md cursor-pointer text-center active:scale-98 flex items-center justify-center gap-1.5"
                             >
                               {timeInfo?.buttonLabel || "🔄 ส่งคำขอคืนอุปกรณ์ให้แอดมินตรวจรับ"}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Member Cancel Action Button in detail panel */}
+                        {request.status.toLowerCase() === "pending" && (
+                          <div className="space-y-2 mt-2">
+                            <button
+                              onClick={() => {
+                                setCancellingRequestId(request.id);
+                                setCancelError(null);
+                                setCancelSuccess(null);
+                              }}
+                              className="w-full rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 font-bold py-3 px-4 text-xs transition shadow-sm hover:shadow-md cursor-pointer text-center active:scale-98 flex items-center justify-center gap-1.5"
+                            >
+                              🚫 ยกเลิกการส่งคำขอยืมนี้
                             </button>
                           </div>
                         )}

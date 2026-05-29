@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { appendBorrowRequest, getSheetBorrowRequestsByUser, updateSheetBorrowRequestStatus, BorrowRequest } from "@/lib/googleSheets";
+import { sendNewBorrowNotification, sendReturnRequestNotification } from "@/lib/email";
 
 /**
  * Handle Borrow Request Creation (Authenticated Members Only)
@@ -71,6 +72,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "ล้มเหลวในการบันทึกข้อมูลยื่นยืมลงฐานข้อมูล Google Sheets" }, { status: 500 });
     }
 
+    // Trigger Email Notification in background (non-blocking)
+    sendNewBorrowNotification(newRequest).catch((err) =>
+      console.error("Failed to send new borrow email in background:", err)
+    );
+
     return NextResponse.json(newRequest, { status: 201 });
   } catch (error) {
     console.error("Error in POST /api/borrow:", error);
@@ -117,13 +123,13 @@ export async function PATCH(request: Request) {
 
   try {
     const data = await request.json();
-    const { id } = data;
+    const { id, action } = data;
 
     if (!id) {
       return NextResponse.json({ error: "Missing required field: id" }, { status: 400 });
     }
 
-    // Verify the request belongs to this user and is currently 'approved' or 'overdue'
+    // Verify the request belongs to this user
     const userRequests = await getSheetBorrowRequestsByUser(token.email);
     const targetRequest = userRequests.find((r) => r.id === id);
 
@@ -132,6 +138,31 @@ export async function PATCH(request: Request) {
     }
 
     const currentStatus = targetRequest.status.toLowerCase();
+
+    // ── 1. Handle Cancellation Action ──
+    if (action === "cancel") {
+      if (currentStatus !== "pending") {
+        return NextResponse.json(
+          { error: "สามารถยกเลิกได้เฉพาะคำขอยืมที่ยังรอดำเนินการอนุมัติ (pending) เท่านั้น" },
+          { status: 400 }
+        );
+      }
+
+      // Transition to 'rejected' status with a custom user-action note
+      const success = await updateSheetBorrowRequestStatus(id, "rejected", "ยกเลิกคำขอยืมโดยผู้ใช้งาน");
+
+      if (!success) {
+        return NextResponse.json({ error: "ล้มเหลวในการยกเลิกคำขอยืมใน Google Sheets" }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        message: "ยกเลิกคำขอยืมสำเร็จ",
+        id,
+        status: "rejected",
+      });
+    }
+
+    // ── 2. Handle Return Request (Default Action) ──
     if (currentStatus !== "approved" && currentStatus !== "overdue") {
       return NextResponse.json(
         { error: "สามารถยื่นคำขอคืนอุปกรณ์ได้เฉพาะใบยืมที่ได้รับการอนุมัติ (approved) หรือเกินกำหนดส่ง (overdue) เท่านั้น" },
@@ -145,6 +176,12 @@ export async function PATCH(request: Request) {
     if (!success) {
       return NextResponse.json({ error: "ล้มเหลวในการอัปเดตสถานะขอคืนใน Google Sheets" }, { status: 500 });
     }
+
+    // Trigger Email Notification in background
+    const updatedRequest = { ...targetRequest, status: "return_pending" };
+    sendReturnRequestNotification(updatedRequest).catch((err) =>
+      console.error("Failed to send return request email in background:", err)
+    );
 
     return NextResponse.json({
       message: "ส่งคำขอคืนอุปกรณ์สำเร็จ รอผู้ดูแลระบบยืนยันรับคืน",

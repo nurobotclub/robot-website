@@ -23,6 +23,9 @@ export const metadata: Metadata = {
   title: "NU Robot Club | Naresuan University",
   description: "NU Robot Club, Naresuan University",
   keywords: ["NU Robot Club", "Naresuan University", "nurobot", "robot", "CPE", "computer engineering", "NU"],
+  icons: {
+    icon: "/Robot.png",
+  },
 };
 
 export default function RootLayout({

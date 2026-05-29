@@ -6,6 +6,8 @@ import {
   getSheetItems,
   updateSheetItemStock
 } from "@/lib/googleSheets";
+import { sendReturnConfirmedNotification, sendLowStockNotification } from "@/lib/email";
+import { checkAndUpdateOverdueRequests } from "@/lib/overdue";
 
 /**
  * GET Handler: Fetch All Borrow Requests (Admin Only)
@@ -22,6 +24,11 @@ export async function GET(request: Request) {
   }
 
   try {
+    // Non-blocking background scan for overdue items
+    checkAndUpdateOverdueRequests().catch((err) =>
+      console.error("Failed to run background overdue checks:", err)
+    );
+
     const requests = await getAllSheetBorrowRequests();
     return NextResponse.json(requests);
   } catch (error) {
@@ -101,6 +108,13 @@ export async function PATCH(request: Request) {
         const matchingItem = currentItems.find((ci) => ci.id === reqItem.id)!;
         const newStock = matchingItem.stock - reqItem.quantity;
         await updateSheetItemStock(reqItem.id, newStock);
+
+        // Trigger low stock warning (stock falls below or equal to 3)
+        if (newStock <= 3) {
+          sendLowStockNotification(matchingItem, newStock).catch((err) =>
+            console.error("Failed to send low stock notification email in background:", err)
+          );
+        }
       }
     } else if (
       newStatus === "returned" &&
@@ -133,6 +147,14 @@ export async function PATCH(request: Request) {
 
     if (!success) {
       return NextResponse.json({ error: "Failed to write updates to Google Sheets" }, { status: 500 });
+    }
+
+    // Trigger Email Notification in background if return is confirmed
+    if (newStatus === "returned" && targetRequest) {
+      const updatedRequest = { ...targetRequest, status: "returned", returnDate: returnDate || "" };
+      sendReturnConfirmedNotification(updatedRequest).catch((err) =>
+        console.error("Failed to send return confirmed email in background:", err)
+      );
     }
 
     return NextResponse.json({
