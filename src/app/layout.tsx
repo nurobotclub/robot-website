@@ -3,6 +3,8 @@ import { Inter, Noto_Sans_Thai } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar"
 import Footer from "@/components/layout/Footer"
+import AuthProvider from "@/providers/AuthProvider"
+import { CartProvider } from "@/providers/CartProvider"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -31,13 +33,17 @@ export default function RootLayout({
   return (
     <html lang="th" className={`${inter.variable} ${notoSansThai.variable} font-sans`}>
       <body>
-        <Navbar />
+        <AuthProvider>
+          <CartProvider>
+            <Navbar />
 
-        <main className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 via-white text-gray-900">
-          {children}
-        </main>
+            <main className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 via-white text-gray-900">
+              {children}
+            </main>
 
-        <Footer />
+            <Footer />
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   )

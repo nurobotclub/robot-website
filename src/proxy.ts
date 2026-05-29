@@ -1,58 +1,80 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-// Routes that require authentication
-const protectedRoutes = [
-  "/dashboard",
+// ──────────────────────────────────────────────
+// Route definitions
+// ──────────────────────────────────────────────
+
+/** Routes that require any authenticated user */
+const protectedPatterns = [
   "/equipment",
   "/cart",
   "/borrow",
-  "/profile",
 ];
 
-// Routes that require admin role
-const adminRoutes = ["/admin"];
+/** Routes that require the admin role */
+const adminPatterns = ["/admin"];
 
-// Routes accessible without authentication
-const publicRoutes = ["/", "/about", "/login"];
+// ──────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────
 
-export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+function isProtectedRoute(pathname: string): boolean {
+  return protectedPatterns.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
 
-  // Check if the route is protected
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
+function isAdminRoute(pathname: string): boolean {
+  return adminPatterns.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
 
-  // Check if the route is an admin route
-  const isAdminRoute = adminRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
+// ──────────────────────────────────────────────
+// Proxy Middleware
+// ──────────────────────────────────────────────
 
-  // TODO: Replace with actual auth check
-  const session = request.cookies.get("session")?.value;
+export async function proxy(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
 
-  // Redirect unauthenticated users to login with callbackUrl
-  if (isProtectedRoute && !session) {
+  // Let NextAuth API calls pass through immediately
+  if (pathname.startsWith("/api/auth")) {
+    return NextResponse.next();
+  }
+
+  // Retrieve the JWT token securely from request cookies
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+
+  const isLoggedIn = !!token;
+  const originalUrl = `${pathname}${search}`;
+
+  // ── Redirect logged-in users away from /login ──
+  if (pathname === "/login" && isLoggedIn) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
+  // ── Protect authenticated routes ──────────────
+  if (isProtectedRoute(pathname) && !isLoggedIn) {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
+    loginUrl.searchParams.set("callbackUrl", originalUrl);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Protect admin routes separately
-  if (isAdminRoute && !session) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
+  // ── Protect admin routes ──────────────────────
+  if (isAdminRoute(pathname)) {
+    // 1. Not logged in → redirect to /login with callbackUrl
+    if (!isLoggedIn) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("callbackUrl", originalUrl);
+      return NextResponse.redirect(loginUrl);
+    }
 
-  // TODO: Add admin role check
-  // if (isAdminRoute && session) {
-  //   const user = await verifySession(session);
-  //   if (user?.role !== 'admin') {
-  //     return NextResponse.redirect(new URL('/dashboard', request.url));
-  //   }
-  // }
+    // 2. Logged in but not an admin → redirect to /equipment
+    if (token.role !== "admin") {
+      return NextResponse.redirect(new URL("/equipment", request.url));
+    }
+  }
 
   return NextResponse.next();
 }
@@ -61,11 +83,11 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except:
-     * - api (API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico, sitemap.xml, robots.txt (metadata files)
+     * - public assets (images, etc.)
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.png$|.*\\.jpg$|.*\\.svg$).*)",
   ],
 };

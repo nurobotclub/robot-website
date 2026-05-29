@@ -1,5 +1,151 @@
 import { NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
+import { 
+  getSheetItems, 
+  appendSheetItem, 
+  updateSheetItemStock, 
+  deleteSheetItem,
+  EquipmentItem 
+} from "@/lib/googleSheets";
 
+// Re-export the interface for compatibility with other files importing it from here
+export type { EquipmentItem };
+
+// ──────────────────────────────────────────────
+// API Handlers
+// ──────────────────────────────────────────────
+
+/**
+ * Fetch all equipment items.
+ */
 export async function GET() {
-  return NextResponse.json({ message: "Items API" });
+  try {
+    const items = await getSheetItems();
+    return NextResponse.json(items);
+  } catch (error) {
+    console.error("Error in GET /api/items:", error);
+    return NextResponse.json({ error: "Failed to fetch items" }, { status: 500 });
+  }
 }
+
+/**
+ * Add a new equipment item (Admin only).
+ */
+export async function POST(request: Request) {
+  // Verify Admin credentials
+  const token = await getToken({
+    req: request as any,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+
+  if (!token || token.role !== "admin") {
+    return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
+  }
+
+  try {
+    const data = await request.json();
+
+    if (!data.name || !data.category || data.stock === undefined) {
+      return NextResponse.json(
+        { error: "Name, category, and stock are required fields" },
+        { status: 400 }
+      );
+    }
+
+    // Generate a beautiful, short, professional item ID (e.g. RB-K4F9)
+    const shortId = `RB-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+    const newItem: EquipmentItem = {
+      id: shortId,
+      name: String(data.name).trim(),
+      category: String(data.category).trim(),
+      stock: Math.max(0, Number(data.stock)),
+      location: String(data.location || "General Shelf").trim(),
+      description: String(data.description || "").trim(),
+    };
+
+    const success = await appendSheetItem(newItem);
+    if (!success) {
+      return NextResponse.json({ error: "Failed to save item to database" }, { status: 500 });
+    }
+
+    return NextResponse.json(newItem, { status: 201 });
+  } catch (error) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+}
+
+/**
+ * Delete an equipment item (Admin only).
+ */
+export async function DELETE(request: Request) {
+  // Verify Admin credentials
+  const token = await getToken({
+    req: request as any,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+
+  if (!token || token.role !== "admin") {
+    return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+
+  if (!id) {
+    return NextResponse.json({ error: "Item ID is required" }, { status: 400 });
+  }
+
+  try {
+    const success = await deleteSheetItem(id);
+    if (!success) {
+      return NextResponse.json({ error: "Failed to delete item or item not found" }, { status: 500 });
+    }
+
+    return NextResponse.json({ message: "Item deleted successfully", id });
+  } catch (error) {
+    console.error("Error in DELETE /api/items:", error);
+    return NextResponse.json({ error: "Server error during deletion" }, { status: 500 });
+  }
+}
+
+/**
+ * Update stock level of an equipment item (Admin only).
+ */
+export async function PATCH(request: Request) {
+  // Verify Admin credentials
+  const token = await getToken({
+    req: request as any,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+
+  if (!token || token.role !== "admin") {
+    return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
+  }
+
+  try {
+    const data = await request.json();
+    const { id, stock } = data;
+
+    if (!id || stock === undefined) {
+      return NextResponse.json(
+        { error: "Item ID and stock are required" },
+        { status: 400 }
+      );
+    }
+
+    // Clamp stock level to positive numbers
+    const updatedStock = Math.max(0, Number(stock));
+
+    const success = await updateSheetItemStock(id, updatedStock);
+    if (!success) {
+      return NextResponse.json({ error: "Failed to update item stock" }, { status: 500 });
+    }
+
+    // Return the updated state
+    return NextResponse.json({ id, stock: updatedStock });
+  } catch (error) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+}
+

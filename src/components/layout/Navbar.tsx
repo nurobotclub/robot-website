@@ -1,7 +1,8 @@
 // src/components/layout/Navbar.tsx
 
-import Link from "next/link"
-import Image from "next/image"
+import Link from "next/link";
+import Image from "next/image";
+import NavbarAuth from "./NavbarAuth";
 
 export default function Navbar() {
   return (
@@ -24,7 +25,7 @@ export default function Navbar() {
               <p className="text-lg font-semibold tracking-wider">
                 Faculty of Engineering
               </p>
-              <p className="text-lg font-semibold tracking-wider  ">
+              <p className="text-lg font-semibold tracking-wider">
                 Naresuan University
               </p>
             </div>
@@ -56,14 +57,9 @@ export default function Navbar() {
             </Link>
           </nav>
 
-          <Link
-            href="/login"
-            className="rounded-xl bg-gray-900 hover:bg-orange-500 px-6 py-2.5 text-base font-bold text-white shadow-md shadow-gray-900/10 transition-all duration-300 hover:shadow-orange-500/20 active:scale-95"
-          >
-            เข้าสู่ระบบ
-          </Link>
+          <NavbarAuth />
         </div>
       </div>
     </header>
-  )
+  );
 }
