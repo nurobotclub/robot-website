@@ -77,10 +77,11 @@ export default function AdminSponsorsPage() {
         setNewUrl("");
         fetchSponsors();
       } else {
-        alert("เกิดข้อผิดพลาดในการเพิ่มผู้สนับสนุน");
+        const errData = await res.json().catch(() => ({}));
+        alert(`ไม่สามารถบันทึกได้: ${errData.error || res.statusText}`);
       }
     } catch (err) {
-      alert("เกิดข้อผิดพลาดในการเชื่อมต่อ");
+      alert(`เกิดข้อผิดพลาดในการเชื่อมต่อ: ${err instanceof Error ? err.message : "Unknown error"}`);
     } finally {
       setIsSubmitting(false);
     }
